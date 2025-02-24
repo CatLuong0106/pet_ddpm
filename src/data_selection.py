@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import logging
+import scipy.io as sio
 from pathlib import Path
 
 
@@ -268,7 +269,7 @@ class Sampling:
         img = nib.load(img_path)
         print(img)
 
-    def generate_dataset(self):
+    def generate_dataset(self, option='npy'):
         """
         TODO: Add logging to this function
         Generates a dataset from a list of 3D images.
@@ -286,7 +287,7 @@ class Sampling:
         -------
         None
         """
-        files = [file_path for file_path in self.data_path.rglob("*.hdr")][0:10]
+        files = [file_path for file_path in self.data_path.rglob("*.hdr")][0:5]
         frames_data = []  # Initialize an empty list to store core data arrays
 
         for file in files:
@@ -294,14 +295,19 @@ class Sampling:
             indices = self.extract_slices(img_data)
             for idx in indices:
                 core_data = img_data[:, :, idx]
+                core_data = core_data / np.max(core_data)
 
                 print("Data Shape: ", core_data.shape)
                 frames_data.append(core_data)
-
         frames_data = np.array(frames_data)
-        print("Final Data Shape: ", frames_data.shape)
-        np.save(Path(r"C:\Users\luongcn\pet_ddpm\data") / "data.npy", frames_data)
+        frames_data = frames_data.transpose(1, 2, 0)  # Reorder dimensions
 
+        if option == 'npy':
+            print("Final Data Shape: ", frames_data.shape)
+            np.save(Path(r"C:\Users\luongcn\pet_ddpm\data") / "data.npy", frames_data)
+        elif option == 'mat': 
+            print("Final Data Shape: ", frames_data.shape)
+            sio.savemat(Path(r"C:\Users\luongcn\pet_ddpm\data") / "data.mat", {"images": frames_data})
 
 def main():
     parser = argparse.ArgumentParser(
@@ -315,16 +321,19 @@ def main():
 
     sampling = Sampling(data_path=folder_path)
     sampling.plot_distribution()
-    sampling.generate_dataset()
+    sampling.generate_dataset(option='mat')
+    sampling.generate_dataset(option='npy')
 
-    data = np.load(r"C:\Users\luongcn\pet_ddpm\data\data.npy")
-    sampling.display_montage(
-        data[500:1000, :, :],
-        grid_size=(8, 16),
-        display_range=(0, 1e4),
-        fig_name="montage.png",
-        non_voxel=True,
-    )
+
+
+    # data = np.load(r"C:\Users\luongcn\pet_ddpm\data\data.npy")
+    # sampling.display_montage(
+    #     data[500:1000, :, :],
+    #     grid_size=(8, 16),
+    #     display_range=(0, 1e4),
+    #     fig_name="montage.png",
+    #     non_voxel=True,
+    # )
 
 
 if __name__ == "__main__":

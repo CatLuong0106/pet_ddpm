@@ -1,3 +1,5 @@
 *.img
 *.hdr
 *.png
+/data
+/training-runs
