@@ -277,7 +277,7 @@ class SongUNet(torch.nn.Module):
 
         # Encoder.
         self.enc = torch.nn.ModuleDict()
-        in_channels = 4 # TODO: remove this for non-conditional
+        # in_channels = 4 # TODO: remove this for non-conditional
         cout = in_channels
         caux = in_channels
         for level, mult in enumerate(channel_mult):
@@ -694,7 +694,7 @@ class EDMPrecond(torch.nn.Module):
 class Patch_EDMPrecond(torch.nn.Module):
     def __init__(self,
         img_resolution,                     # Image resolution.
-        img_channels    = 4,                       # Number of color channels. #TODO: Remove 4 for non-conditional training
+        img_channels,                       # Number of color channels. #TODO: Remove 4 for non-conditional training
         out_channels    = None,
         label_dim       = 0,                # Number of class labels, 0 = unconditional.
         use_fp16        = False,            # Execute the underlying model at FP16 precision?
@@ -720,7 +720,7 @@ class Patch_EDMPrecond(torch.nn.Module):
         self.out_channels = img_channels if out_channels is None else out_channels
         self.model = globals()[model_type](img_resolution=img_resolution, in_channels=img_channels, out_channels=self.out_channels, label_dim=label_dim, **model_kwargs)
 
-    def forward(self, x, sigma, x_pos=None, class_labels=None, force_fp32=False, **model_kwargs):
+    def forward(self, x, sigma, x_pos=None, class_labels=None, force_fp32=False, **model_kwargs): #TODO: Pass x_prior here? 
         x = x.to(torch.float32)
         sigma = sigma.to(torch.float32).reshape(-1, 1, 1, 1)
         class_labels = None if self.label_dim == 0 else torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels.to(torch.float32).reshape(-1, self.label_dim)

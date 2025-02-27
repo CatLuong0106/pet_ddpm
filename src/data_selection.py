@@ -269,6 +269,23 @@ class Sampling:
         img = nib.load(img_path)
         print(img)
 
+    def pad_to_square(self, image): 
+        H, W = image.shape[:2]  # Get original height and width
+        new_size = max(H, W)  # Determine the target size
+
+        # Calculate padding for height and width
+        pad_top = (new_size - H) // 2
+        pad_bottom = new_size - H - pad_top
+        pad_left = (new_size - W) // 2
+        pad_right = new_size - W - pad_left
+
+        # Apply padding
+        padded_image = np.pad(image, 
+                            ((pad_top, pad_bottom), (pad_left, pad_right)), 
+                            mode='constant', constant_values=0)
+
+        return padded_image
+    
     def generate_dataset(self, option='npy'):
         """
         TODO: Add logging to this function
@@ -287,27 +304,33 @@ class Sampling:
         -------
         None
         """
-        files = [file_path for file_path in self.data_path.rglob("*.hdr")][0:5]
+        # files = [file_path for file_path in self.data_path.rglob("*.hdr")][0:5]
+        files = [file_path for file_path in self.data_path.rglob("*.hdr")]
         frames_data = []  # Initialize an empty list to store core data arrays
 
         for file in files:
             img_data = nib.load(file).get_fdata()
-            indices = self.extract_slices(img_data)
+            indices = self.extract_slices(img_data, method="scale_max")
             for idx in indices:
                 core_data = img_data[:, :, idx]
                 core_data = core_data / np.max(core_data)
+                H, W = core_data.shape
+
+                # Padding if the image is not squared
+                if H != W: core_data = self.pad_to_square(core_data)
 
                 print("Data Shape: ", core_data.shape)
                 frames_data.append(core_data)
         frames_data = np.array(frames_data)
+        frames_data.shape
         frames_data = frames_data.transpose(1, 2, 0)  # Reorder dimensions
 
         if option == 'npy':
             print("Final Data Shape: ", frames_data.shape)
-            np.save(Path(r"C:\Users\luongcn\pet_ddpm\data") / "data.npy", frames_data)
+            np.save(Path("../data") / "data.npy", frames_data)
         elif option == 'mat': 
             print("Final Data Shape: ", frames_data.shape)
-            sio.savemat(Path(r"C:\Users\luongcn\pet_ddpm\data") / "data.mat", {"images": frames_data})
+            sio.savemat(Path("../data") / "data.mat", {"images": frames_data})
 
 def main():
     parser = argparse.ArgumentParser(
@@ -317,10 +340,10 @@ def main():
     parser.add_argument("--data_path", "-d", type=str, required=True)
     args = parser.parse_args()
 
-    folder_path = Path(args.data_path) / "HRRT_FDG" / "20231023_DH485"
+    folder_path = Path(args.data_path) / "NX_FDG" / "20231027"
 
     sampling = Sampling(data_path=folder_path)
-    sampling.plot_distribution()
+    # sampling.plot_distribution()
     sampling.generate_dataset(option='mat')
     sampling.generate_dataset(option='npy')
 

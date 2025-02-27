@@ -3,7 +3,7 @@
 # Define variables
 NUM_PROC=4
 OUTDIR="training-runs"
-DATA_PATH="/fs/scratch/PES0923/li2ai/HRRT_to_NX/mat_data/NX_FDG_data_mat.mat"
+DATA_PATH="/home/luongcn/pet_ddpm/data/data.mat"
 COND=0
 ARCH="ddpmpp"
 BATCH_SIZE=16

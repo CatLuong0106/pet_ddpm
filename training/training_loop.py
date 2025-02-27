@@ -19,7 +19,7 @@ import wandb
 
 import sys
 # sys.path.append('/n/badwater/z/jashu/Patch-Diffusion/training')
-sys.path.append(r'C:\Users\luongcn\pet_ddpm\training')
+sys.path.append('/home/luongcn/pet_ddpm/training') # TODO: Modify this depends on the training path
 from dataset import ImageFolderDataset2, ImageFolderDataset3, ImageFolderDataset5
 
 def set_requires_grad(model, value):
@@ -79,11 +79,12 @@ def training_loop(
     dist.print0('Loading dataset...')
     #dataset_obj = dnnlib.util.construct_class_by_name(**dataset_kwargs) # subclass of training.dataset.Dataset
     # mypath = '/n/badwater/z/jashu/aapm_small/ct_3img/ct_3img.mat'
-    mypath = 'data\data.mat'
+    mypath = '/home/luongcn/pet_ddpm/data/data.mat'
 
     #this should contain a mat file with a variable called 'images' of size 256x256xH where H is the number of training images
     # imsize = 256
-    imsize = 407 # TODO: Potentially change this back to 256 if we decided to rescale it? 
+
+    imsize = 484 # TODO: Change it to whatever image size we have
     dataset_obj = ImageFolderDataset3(mypath, imsize + 2*pad_width, pad=pad_width, bigdata=False, channels=1, zlast=True)
     #dataset_obj = ImageFolderDataset5(mypath, 256 + 2*pad_width, pad=pad_width, channels=1, cache=False)
 
@@ -116,8 +117,8 @@ def training_loop(
                             img_channels=net_input_channels,
                             out_channels=4 if train_on_latents else dataset_obj.num_channels,
                             label_dim=dataset_obj.label_dim)
-    print(network_kwargs)
-    print(interface_kwargs)
+    print("Network arguments: \n", network_kwargs)
+    print("Interface arugments: \n", interface_kwargs)
     net = dnnlib.util.construct_class_by_name(**network_kwargs, **interface_kwargs) # subclass of torch.nn.Module
 
     # network_pkl = '/n/badwater/z/jashu/Patch-Diffusion/training-runs/188phantoms2d/network-snapshot-000500.pkl'

@@ -1,4 +1,4 @@
 #!/bin/bash
-DATA_PATH="C:\Users\luongcn\pet_ddpm\HRRT_NX"
+DATA_PATH="/home/luongcn/pet_ddpm/raw_data"
 
 python data_selection.py -d $DATA_PATH
