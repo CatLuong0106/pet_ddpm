@@ -396,7 +396,7 @@ class TestImages(Sampling):
                 # Padding if the image is not squared
                 if H != W: core_data = self.pad_to_size(core_data)
                 output_path = Path(dest_path) / f"slice_{count}.png"
-                plt.imsave(output_path, core_data, cmap="gray", vmin=0, vmax=1e4)
+                plt.imsave(output_path, core_data, cmap="gray", vmin=0, vmax=5e4)
                 count += 1
             
 def main():
