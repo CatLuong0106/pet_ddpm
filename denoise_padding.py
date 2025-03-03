@@ -10,27 +10,36 @@ import dnnlib
 from torch_utils import distributed as dist
 from training.pos_embedding import Pos_Embedding
 import scipy.io
-from diffusers import AutoencoderKL
+# from diffusers import AutoencoderKL
 import random
 from skimage.metrics import peak_signal_noise_ratio as psnr
 import matplotlib.pyplot as plt
 import sys
 sys.path.append('/n/badwater/z/jashu/Patch-Diffusion/odlstuff')
-from fanbeam import *
-from parbeam import *
+# from fanbeam import *
+# from parbeam import *
 
 torch.manual_seed(2)
 
-def getIndices(spaced, patches, pad, psize, freezeindex = False):
+def check_valid(z: list) -> bool:  #NOTE: Remove if thinking this might not be necessary later on
+    return (0 <= z[0] <= 512 and 
+            0 <= z[1] <= 512 and 
+            0 <= z[2] <= 512 and 
+            0 <= z[3] <= 512)
+    
+def getIndices(spaced, patches, pad, psize, freezeindex = False): #NOTE: Main function to get the indices for the patches
     a = random.randint(0, pad-1)
     b = random.randint(0, pad-1)
+
     if freezeindex:
         a = 0
         b = 0
     indices = []
+
     for p in range(patches):
         for q in range(patches):
-            indices.append([spaced[p]+a, spaced[p]+a+psize, spaced[q]+b, spaced[q]+b+psize])
+            z = [spaced[p]+a, spaced[p]+a+psize, spaced[q]+b, spaced[q]+b+psize]
+            indices.append(z) # TODO: Hacking. CHange this back if it doesn't work
     return indices
 
 def random_patch(images, patch_size, resolution):
@@ -103,7 +112,7 @@ def makeFigures(noisy2, denoised2, orig2, i, imsize=256, pad=64):
     plt.savefig(dir + str(i) + '.png')
     plt.close('all')
 
-def denoisedFromImage(net, x2, t_hat, psize=64, pad=64, patches=5, imsize=256, wrong = False, label=None):
+def denoisedFromImage(net, x2, t_hat, psize=64, pad=24, patches=5, imsize=512, wrong = False, label=None):
     if wrong:
         x = x2
     else:
@@ -148,7 +157,6 @@ def denoisedTile(net, x, t_hat, latents_pos, class_labels, pad=24, psize=56, ove
 
     for i in range(patches):
         z = indices[i]
-        #print(z)
         x_input[i,:,:,:] = torch.squeeze(x_hat[0,:,z[0]:z[1], z[2]:z[3]])
         pos_input[i,:,:,:] = torch.squeeze(latents_pos[:,:,z[0]:z[1], z[2]:z[3]])
     bigout = net(x_input, t_hat, pos_input, class_labels).to(torch.float64)
@@ -200,7 +208,7 @@ def denoisedOverlap(net, x, t_hat, latents_pos, class_labels, pad=24, psize=56, 
 
 def denoisedFromPatches(net, x, t_hat, latents_pos, class_labels, indices, t_goal = -1, avg=1, spaced=[], wrong=False):
     if len(spaced) > 1:
-        indices = getIndices(spaced, 5, 24, 56)
+        indices = getIndices(spaced, 5, 24, 64) # TODO: Fix this getIndices function to make it work. 
     if wrong:
         x_hat = x
     else:
@@ -214,17 +222,34 @@ def denoisedFromPatches(net, x, t_hat, latents_pos, class_labels, indices, t_goa
     output = torch.zeros_like(x_hat)
     x_input = torch.zeros(patches, channels, psize, psize).to(torch.device('cuda'))
     pos_input = torch.zeros(patches, 2, psize, psize).to(torch.device('cuda'))
-
+    # print("All indices: ", indices)
     for i in range(patches):
-        z = indices[i]
+        z = indices[i] #NOTE: Indices values of the patches
+        # if np.abs(z[2] - z[3]) != psize: 
+        #     z[2] -= (psize - np.abs(z[2] - z[3]))
+
+        #TODO: Hacking. Basically fix so that the indices of the patches won't exceed the range (0, 512)
+        if z[1] > 512: 
+            z[0] -= (z[1] - 512)
+            z[1] -= (z[1] - 512)
+
+        if z[3] > 512: 
+            z[2] -= (z[3] - 512)
+            z[3] -= (z[3] - 512)
+
         x_input[i,:,:,:] = torch.squeeze(x_hat[0,:,z[0]:z[1], z[2]:z[3]])
+        # if x_input[i,:,:,:].shape != x_hat[0,:,z[0]:z[1], z[2]:z[3]][:, :, :, 0].shape: #TODO: HACKING REMOVING THIS AFTER It's figured out
+        #     continue
+        # x_input[i,:,:,:] = x_hat[0,:,z[0]:z[1], z[2]:z[3]]
         pos_input[i,:,:,:] = torch.squeeze(latents_pos[:,:,z[0]:z[1], z[2]:z[3]])
     bigout = net(x_input, t_hat, pos_input, class_labels).to(torch.float64)
 
     for i in range(patches):
         z = indices[i]
         x_patch = x_hat[0,:,z[0]:z[1], z[2]:z[3]]
-        output[0,:,z[0]:z[1], z[2]:z[3]] += bigout[i,:,:,:]
+        # if output[0,:,z[0]:z[1], z[2]:z[3]][:, :, :, 0].shape != bigout[i,:,:,:].shape: # TODO: Hacking removing this
+        #     continue
+        output[0,:,z[0]:z[1], z[2]:z[3]] += bigout[i,:,:,:] #TODO: Hacking removing this
         output[0,:,z[0]:z[1], z[2]:z[3]] -= x_patch
     x_hat = x_hat + output
 

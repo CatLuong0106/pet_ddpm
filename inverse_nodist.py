@@ -9,7 +9,7 @@ import PIL.Image
 import dnnlib
 from training.pos_embedding import Pos_Embedding
 import scipy.io
-from diffusers import AutoencoderKL
+# from diffusers import AutoencoderKL
 import random
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
@@ -20,7 +20,7 @@ from denoise_padding import denoisedFromPatches, getIndices, denoisedOverlap, de
 
 def makeFigures(noisy2, denoised2, orig2, i, imsize=256):
     channels = len(denoised2[:,0,0])
-    dir = '/n/badwater/z/jashu/Patch-Diffusion/inf_results/'
+    dir = '/home/luongcn/pet_ddpm/results/' #TODO: Change this path to not be hard-coded
     denoised = torch.clone(denoised2)
     noisy = torch.clone(noisy2)
     orig = orig2.copy()
@@ -106,14 +106,21 @@ def pc_sampling(net, latents, latents_pos, inverseop, noisy=None, randn_like = t
             makeFigures(x_init, x[:,pad:pad+w, pad:pad+w].detach(), clean, i)
     return x
 
-def measurement_cond_fn(measurement, x_prev, x0hat, inverseop, pad=24, w=256):
-    difference = measurement - inverseop.A(x0hat[:,pad:pad+w, pad:pad+w]).to(dtype=torch.float32)
+def measurement_cond_fn(measurement, x_prev, x0hat, inverseop, pad=64, w=512): # Originally 256
+    temp = inverseop.A(x0hat[:,pad:pad+w, pad:pad+w]).to(dtype=torch.float32) #NOTE: OG Code
+    # print()
+    # print("xhat oringinal dim: ", x0hat.shape)
+    # print("xhat dim: ", x0hat[:,pad:pad+w+pad, pad:pad+w+pad].shape)
+    # print("Temp Dim: ", temp.shape)
+    # print("Measurement Dim: ", measurement.shape)
+    # temp = inverseop.A(x0hat).to(dtype=torch.float32)
+    difference = measurement - temp
     norm = torch.linalg.norm(difference)
     norm_grad = torch.autograd.grad(outputs=norm, inputs=x_prev)[0]
     return norm_grad
 
 def dps(net, latents, latents_pos, inverseop, noisy=None, randn_like = torch.randn_like, num_steps=18,
-              clean=None, sigma_min=0.005, sigma_max = 0.05, rho=7, zeta=0.3, pad=64, psize=64,
+              clean=None, sigma_min=0.005, sigma_max = 0.05, rho=7, zeta=0.3, pad=24, psize=64,
               S_churn=0, S_min=0, S_max=float('inf'), S_noise=1,):
     w = len(latents[0,0,0,:])
     patches = w // psize + 1
@@ -125,11 +132,12 @@ def dps(net, latents, latents_pos, inverseop, noisy=None, randn_like = torch.ran
 
     x = sigma_max*torch.randn_like(x_init).cuda()
     x = torch.nn.functional.pad(x_init, (pad, pad, pad, pad), "constant", 0).requires_grad_()
+
     for i, (t_cur, t_next) in tqdm.tqdm(enumerate(zip(t_steps[:-1], t_steps[1:]))):
         alpha = 0.5*t_cur**2
         for j in range(10):
             indices = getIndices(spaced, patches, pad, psize)
-            D = denoisedFromPatches(net, torch.unsqueeze(x, 0), t_cur, latents_pos, None, indices, t_goal=0, wrong=False)
+            D = denoisedFromPatches(net, torch.unsqueeze(x, 0), t_cur, latents_pos, None, indices, t_goal=0, wrong=False) #NOTE: The patches and its values
             D = torch.squeeze(D, dim=0)
             score = (D-x)/t_cur**2
             z = randn_like(x)
@@ -156,14 +164,12 @@ def langevin(net, latents, latents_pos, inverseop, noisy=None, randn_like = torc
     t_steps = (sigma_max ** (1 / rho) + step_indices / (num_steps - 1) * (sigma_min ** (1 / rho) - sigma_max ** (1 / rho))) ** rho
     #t_steps = torch.from_numpy(np.geomspace(sigma_max, sigma_min, num=num_steps)).to(latents.device)
     t_steps = torch.cat([net.round_sigma(t_steps), torch.zeros_like(t_steps[:1])])
-    #print(t_steps)
     x = x_init #might initialize with pure noise, depends
     x = torch.nn.functional.pad(x, (pad, pad, pad, pad), "constant", 0)
     x = sigma_max * torch.randn_like(x)
 
     patches = w // psize + 1
     spaced = np.linspace(0, (patches-1)*psize, patches, dtype=int)
-    #print(x.shape)
     for i, (t_cur, t_next) in tqdm.tqdm(enumerate(zip(t_steps[:-1], t_steps[1:]))):
         alpha = 1*t_cur**2
         for j in range(10):
@@ -278,10 +284,15 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
     with dnnlib.util.open_url(network_pkl, verbose=False) as f:
         net = pickle.load(f)['ema'].to(device)
 
+    #NOTE: Read all the .png files 
     files = os.listdir(image_dir)
     png_files = [file for file in files if file.endswith('.png')]
+    
+    #NOTE: Initialize the inverse operator
     inverseop = InverseOperator(image_size, name, views=views, channels=channels, blursize=blursize, scale_factor=scale)
 
+    
+    #NOTE: Doing Position encoding for the neural networks
     x_start = 0
     y_start = 0
     resolution = image_size + 2*pad
@@ -292,6 +303,7 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
     latents_pos = torch.stack([x_pos, y_pos], dim=0).to(device)
     latents_pos = latents_pos.unsqueeze(0).repeat(1, 1, 1, 1)
 
+    #NOTE: Generate images
     allclean = np.zeros((len(png_files), image_size, image_size, channels))
     allrecon = np.zeros((len(png_files), image_size, image_size, channels))
     print(f'Generating images to "{outdir}"...')
@@ -301,21 +313,18 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
     ssimarr = []
 
     for loop in tqdm.tqdm(range(len(png_files))):
-        clean = PIL.Image.open(os.path.join(image_dir, png_files[loop]))
-        clean = np.asarray(clean)/255
+        clean = PIL.Image.open(os.path.join(image_dir, png_files[loop])).convert("L")
+        # clean = np.asarray(clean)/255 #NOTE: This is only for image with RGB (0, 255)
+        clean = np.asarray(clean)/np.max(np.asarray(clean))
+
         if channels == 1:
             clean = np.expand_dims(clean, 0)
         elif channels == 3:
             clean = np.transpose(clean, (2,0,1))
-        print(clean.min(), clean.max())
-        print('clean shape: ', clean.shape)
-
         print(f'Now doing image "{png_files[loop]}"')
 
         xclean = torch.from_numpy(clean).cuda()
         noisy_y = inverseop.A(xclean)
-        print('clean: ', xclean.shape)
-        print('noisy: ', noisy_y.shape)
         noisy_y = noisy_y + sigma*torch.randn_like(noisy_y)
         scipy.io.savemat('proj.mat', {'proj': noisy_y.cpu().numpy()})
 

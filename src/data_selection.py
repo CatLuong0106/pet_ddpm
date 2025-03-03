@@ -270,6 +270,19 @@ class Sampling:
         print(img)
 
     def pad_to_square(self, image): 
+        """
+        Pads an image to a squared shape by adding zeros to the top/bottom and left/right of the image.
+        
+        Parameters
+        ----------
+        image : numpy array
+            The image to be padded.
+        
+        Returns
+        -------
+        numpy array
+            The padded image in a squared shape.
+        """
         H, W = image.shape[:2]  # Get original height and width
         new_size = max(H, W)  # Determine the target size
 
@@ -284,6 +297,40 @@ class Sampling:
                             ((pad_top, pad_bottom), (pad_left, pad_right)), 
                             mode='constant', constant_values=0)
 
+        return padded_image
+    
+    def pad_to_size(self, image, size=512): 
+        """
+        Pads an image to a specified size by adding zeros to the top/bottom and left/right of the image.
+        
+        Parameters
+        ----------
+        image : numpy array
+            The image to be padded.
+        size : int, optional
+            The size to which the image should be padded, by default 512
+            
+        Returns
+        -------
+        numpy array
+            The padded image.
+        """
+        h, w = image.shape[:2]
+        
+        # Calculate padding
+        pad_h = max(size - h, 0) // 2
+        pad_w = max(size - w, 0) // 2
+        
+        # Add extra pixel to bottom/right if odd number of padding pixels
+        pad_h_extra = max(size - h - 2*pad_h, 0)
+        pad_w_extra = max(size - w - 2*pad_w, 0)
+        
+        # Pad the image
+        padded_image = np.pad(image,
+                            ((pad_h, pad_h + pad_h_extra),
+                            (pad_w, pad_w + pad_w_extra)),
+                            mode='constant', constant_values=0)
+        
         return padded_image
     
     def generate_dataset(self, option='npy'):
@@ -332,6 +379,26 @@ class Sampling:
             print("Final Data Shape: ", frames_data.shape)
             sio.savemat(Path("../data") / "data.mat", {"images": frames_data})
 
+class TestImages(Sampling): 
+    def __init__(self, test_path, *args, **kwargs): 
+        super().__init__(*args, **kwargs)
+        self.test_path = test_path
+        
+    def get_test_images(self, dest_path): 
+        files = [file_path for file_path in Path(self.test_path).rglob("*.hdr")]
+        count = 0
+        for file in files:
+            img_data = nib.load(file).get_fdata()
+            indices = self.extract_slices(img_data, method="scale_max")
+            for idx in indices:
+                core_data = img_data[:, :, idx]
+                H, W = core_data.shape
+                # Padding if the image is not squared
+                if H != W: core_data = self.pad_to_size(core_data)
+                output_path = Path(dest_path) / f"slice_{count}.png"
+                plt.imsave(output_path, core_data, cmap="gray", vmin=0, vmax=1e4)
+                count += 1
+            
 def main():
     parser = argparse.ArgumentParser(
         description="Extract slices from a 3D image based on different methods."

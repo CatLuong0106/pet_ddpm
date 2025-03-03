@@ -228,7 +228,7 @@ class FourierEmbedding(torch.nn.Module):
 # available at https://github.com/yang-song/score_sde_pytorch
 
 @persistence.persistent_class
-class SongUNet(torch.nn.Module):
+class SongUNet(torch.nn.Module): #TODO: Modify the number of in_channels here only (perhaps in training_loop instead)
     def __init__(self,
         img_resolution,                     # Image resolution at input/output.
         in_channels,                        # Number of color channels at input.
@@ -726,6 +726,7 @@ class Patch_EDMPrecond(torch.nn.Module):
         class_labels = None if self.label_dim == 0 else torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels.to(torch.float32).reshape(-1, self.label_dim)
         dtype = torch.float16 if (self.use_fp16 and not force_fp32 and x.device.type == 'cuda') else torch.float32
 
+        #NOTE: Euclidean Internal Scaling
         c_skip = self.sigma_data ** 2 / (sigma ** 2 + self.sigma_data ** 2)
         c_out = sigma * self.sigma_data / (sigma ** 2 + self.sigma_data ** 2).sqrt()
         c_in = 1 / (self.sigma_data ** 2 + sigma ** 2).sqrt()

@@ -33,7 +33,7 @@ def training_loop(
     dataset_kwargs      = {},       # Options for training set.
     data_loader_kwargs  = {},       # Options for torch.utils.data.DataLoader.
     network_kwargs      = {},       # Options for model and preconditioning.
-    loss_kwargs         = {},       # Options for loss function.
+    loss_kwargs         = {},       # Options for loss function. # TODO: this is for patch_loss.py arguments
     optimizer_kwargs    = {},       # Options for optimizer.
     augment_kwargs      = None,     # Options for augmentation pipeline, None = disable.
     seed                = 0,        # Global random seed.
@@ -216,7 +216,7 @@ def training_loop(
 
                 labels = labels.to(device)
                 loss = loss_fn(net=ddp, images=images, patch_size=patch_size, resolution=img_resolution,
-                               labels=labels, augment_pipe=augment_pipe)
+                               labels=labels, augment_pipe=augment_pipe) # TODO: Modify here to add the images in
 
                 training_stats.report('Loss/loss', loss)
                 loss.sum().mul(loss_scaling / batch_gpu_total / batch_mul).backward()

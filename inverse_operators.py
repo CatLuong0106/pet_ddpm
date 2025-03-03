@@ -5,8 +5,8 @@ import scipy
 import torch.nn.functional as F
 
 sys.path.append('/n/badwater/z/jashu/Patch-Diffusion/odlstuff')
-from fanbeam import *
-from parbeam import *
+# from fanbeam import *
+# from parbeam import *
 from functools import partial
 import math
 

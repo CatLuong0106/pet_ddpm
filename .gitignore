@@ -3,3 +3,4 @@
 *.png
 /data
 /training-runs
+__pycache__/

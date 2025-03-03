@@ -59,6 +59,7 @@ class Patch_EDMLoss:
     def __call__(self, net, images, patch_size, resolution, labels=None, augment_pipe=None):
         images, images_pos = self.pachify(images, patch_size)
 
+        #NOTE: Add gaussian noise
         rnd_normal = torch.randn([images.shape[0], 1, 1, 1], device=images.device)
         sigma = (rnd_normal * self.P_std + self.P_mean).exp()
         weight = (sigma ** 2 + self.sigma_data ** 2) / (sigma * self.sigma_data) ** 2
@@ -67,6 +68,7 @@ class Patch_EDMLoss:
         n = torch.randn_like(y) * sigma
         yn = y + n
 
+        #NOTE: The `Patch_EDMPrecond` class
         D_yn = net(yn, sigma, x_pos=images_pos, class_labels=labels, augment_labels=augment_labels)
         loss = weight * ((D_yn - y) ** 2)
         return loss
