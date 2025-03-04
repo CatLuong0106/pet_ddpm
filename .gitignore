@@ -1,6 +1,7 @@
 *.img
 *.hdr
 *.png
+*.mat
 /data
 /training-runs
 __pycache__/
