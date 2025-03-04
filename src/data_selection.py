@@ -116,7 +116,7 @@ class Sampling:
         indices = np.where(condition)[0]
         return indices
 
-    def extract_slices(self, img, method="z-score", scale_max=0.25):
+    def extract_slices(self, img, method="z-score", scale_max=0.10):
         """
         Extract slices from a 3D image based on the specified method.
 
@@ -379,6 +379,9 @@ class Sampling:
             print("Final Data Shape: ", frames_data.shape)
             sio.savemat(Path("../data") / "data.mat", {"images": frames_data})
 
+    
+    #TODO: Add code to generate dual-dataset (NX (original data) + HRRT (prior data))
+
 class TestImages(Sampling): 
     def __init__(self, test_path, *args, **kwargs): 
         super().__init__(*args, **kwargs)
@@ -413,8 +416,6 @@ def main():
     # sampling.plot_distribution()
     sampling.generate_dataset(option='mat')
     sampling.generate_dataset(option='npy')
-
-
 
     # data = np.load(r"C:\Users\luongcn\pet_ddpm\data\data.npy")
     # sampling.display_montage(

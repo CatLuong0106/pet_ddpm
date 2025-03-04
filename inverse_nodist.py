@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 import sys
 from inverse_operators import *
 from denoise_padding import denoisedFromPatches, getIndices, denoisedOverlap, denoisedTile
+from src.data_selection import Sampling
+import nibabel as nib
+from pathlib import Path
 
 def makeFigures(noisy2, denoised2, orig2, i, imsize=256):
     channels = len(denoised2[:,0,0])
@@ -285,9 +288,35 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
         net = pickle.load(f)['ema'].to(device)
 
     #NOTE: Read all the .png files 
-    files = os.listdir(image_dir)
-    png_files = [file for file in files if file.endswith('.png')]
+    # files = os.listdir(image_dir)
+    # png_files = [file for file in files if file.endswith('.png')]
+    hdr_files = [file_path for file_path in Path(image_dir).rglob("*.hdr")]
+    print(hdr_files)
+    obj = Sampling()
+    frames_data = []
+    for file in hdr_files:
+        img_data = nib.load(file).get_fdata()
+        indices = obj.extract_slices(img_data, method="scale_max")
+        indices = [indices[len(indices) * 2 // 3]]
+        for idx in indices:
+            core_data = img_data[:, :, idx]
+            core_data = core_data / np.max(core_data)
+            H, W = core_data.shape
+
+            # Padding if the image is not squared
+            if H != W: core_data = obj.pad_to_size(core_data)
+
+            print("Data Shape: ", core_data.shape)
+            frames_data.append(core_data)
+    frames_data = np.array(frames_data)
+    print(len(frames_data))
+    # print(frames_data.shape)
+    # frames_data = frames_data.transpose(1, 2, 0)  # Reorder dimensions
     
+    # print(frames_data)
+    # print(frames_data.shape)
+    
+    num_images  = len(frames_data)
     #NOTE: Initialize the inverse operator
     inverseop = InverseOperator(image_size, name, views=views, channels=channels, blursize=blursize, scale_factor=scale)
 
@@ -304,16 +333,17 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
     latents_pos = latents_pos.unsqueeze(0).repeat(1, 1, 1, 1)
 
     #NOTE: Generate images
-    allclean = np.zeros((len(png_files), image_size, image_size, channels))
-    allrecon = np.zeros((len(png_files), image_size, image_size, channels))
+    allclean = np.zeros((num_images, image_size, image_size, channels))
+    allrecon = np.zeros((num_images, image_size, image_size, channels))
     print(f'Generating images to "{outdir}"...')
     totpsnr = 0
     totssim = 0
     psnrarr = []
     ssimarr = []
 
-    for loop in tqdm.tqdm(range(len(png_files))):
-        clean = PIL.Image.open(os.path.join(image_dir, png_files[loop])).convert("L")
+    for loop in tqdm.tqdm(range(num_images)):
+        # clean = PIL.Image.open(os.path.join(image_dir, num_images[loop])).convert("L")
+        clean = frames_data[loop]
         # clean = np.asarray(clean)/255 #NOTE: This is only for image with RGB (0, 255)
         clean = np.asarray(clean)/np.max(np.asarray(clean))
 
@@ -321,7 +351,7 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
             clean = np.expand_dims(clean, 0)
         elif channels == 3:
             clean = np.transpose(clean, (2,0,1))
-        print(f'Now doing image "{png_files[loop]}"')
+        print(f'Now doing image "{loop}"')
 
         xclean = torch.from_numpy(clean).cuda()
         noisy_y = inverseop.A(xclean)
@@ -350,8 +380,8 @@ def main(network_pkl, image_size, outdir, image_dir, name, views, blursize, scal
         allclean[loop, :,:,:] = cleantmp
         allrecon[loop,:,:,:] = images
 
-    print('average psnr: ', totpsnr/(len(png_files)))
-    print('average ssim: ', totssim/(len(png_files)))
+    print('average psnr: ', totpsnr/(num_images))
+    print('average ssim: ', totssim/(num_images))
 
 
 #----------------------------------------------------------------------------

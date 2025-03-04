@@ -59,6 +59,7 @@ def training_loop(
     device              = torch.device('cuda'),
     four_channels = 1,              # Always keep as 1
     hash_channels = 1,              # Always keep as 1
+    imsize = 512,                   # Either this or 256
 ):
     start_time = time.time()
     np.random.seed((seed * dist.get_world_size() + dist.get_rank()) % (1 << 31))
@@ -84,12 +85,15 @@ def training_loop(
     #this should contain a mat file with a variable called 'images' of size 256x256xH where H is the number of training images
     # imsize = 256
 
-    imsize = 484 # TODO: Change it to whatever image size we have
+    imsize = imsize # TODO: Change it to whatever image size we have
     dataset_obj = ImageFolderDataset3(mypath, imsize + 2*pad_width, pad=pad_width, bigdata=False, channels=1, zlast=True)
+    #TODO: Create another dataset object (to load in the priors)
     #dataset_obj = ImageFolderDataset5(mypath, 256 + 2*pad_width, pad=pad_width, channels=1, cache=False)
 
     dataset_sampler = misc.InfiniteSampler(dataset=dataset_obj, rank=dist.get_rank(), num_replicas=dist.get_world_size(), seed=seed)
     dataset_iterator = iter(torch.utils.data.DataLoader(dataset=dataset_obj, sampler=dataset_sampler, batch_size=batch_gpu, **data_loader_kwargs))
+    #TODO: Create a new dataset iterator.
+
 
     img_resolution, img_channels = dataset_obj.resolution, dataset_obj.num_channels
 
@@ -188,8 +192,8 @@ def training_loop(
     while True:
 
         # Accumulate gradients.
-        optimizer.zero_grad(set_to_none=True)
-        for round_idx in range(num_accumulation_rounds):
+        optimizer.zero_grad(set_to_none=True) # Zero out the gradients
+        for round_idx in range(num_accumulation_rounds): #TODO: In this loop, try to include two dataset_iterator, NX and prior. 
             with misc.ddp_sync(ddp, (round_idx == num_accumulation_rounds - 1)):
                 if progressive:
                     p_cumsum = p_list.cumsum()

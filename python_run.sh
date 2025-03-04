@@ -1,3 +1,34 @@
 #!/bin/bash
 
-python train.py --outdir=training-runs --data=/home/luongcn/pet_ddpm/data/data.mat --cond=0 --arch=ddpmpp --batch=4 --lr=1e-4 --dropout=0.05 --augment=0 --real_p=0.5 --padding=1 --tick=2 --snap=10 --pad_width=64
+# Define variables
+OUTDIR=training-runs
+DATA_PATH=/home/luongcn/pet_ddpm/data/data.mat
+COND=0
+ARCH=ddpmpp
+BATCH=4
+LR=1e-4
+DROPOUT=0.05
+AUGMENT=0
+REAL_P=0.5
+PADDING=1
+TICK=2
+SNAP=10
+PAD_WIDTH=64
+IMSIZE=512
+
+# Run the training script with variables
+python train.py \
+  --outdir="$OUTDIR" \
+  --data="$DATA_PATH" \
+  --cond="$COND" \
+  --arch="$ARCH" \
+  --batch="$BATCH" \
+  --lr="$LR" \
+  --dropout="$DROPOUT" \
+  --augment="$AUGMENT" \
+  --real_p="$REAL_P" \
+  --padding="$PADDING" \
+  --tick="$TICK" \
+  --snap="$SNAP" \
+  --pad_width="$PAD_WIDTH" \
+  --imsize="$IMSIZE"
