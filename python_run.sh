@@ -14,7 +14,7 @@ PADDING=1
 TICK=2
 SNAP=10
 PAD_WIDTH=64
-IMSIZE=512
+IMSIZE=484
 
 # Run the training script with variables
 python train.py \

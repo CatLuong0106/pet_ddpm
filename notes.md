@@ -8,5 +8,4 @@
 - Cleaning up slices with little to no information --> Only picking the "representative" slices, that means slices with distinct information. --> Process the image in training.
 
 # Code notes: (Fill this out later)
--
--
+- When selecting the PAD size for testing, PAD value must be `(k + 1)P - N` where `k = floor(N/P)` and `P` is the patchsize and `N` is the image size

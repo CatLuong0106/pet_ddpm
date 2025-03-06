@@ -4,7 +4,6 @@ channels:
   - nvidia
 dependencies:
   - python>=3.8, < 3.10  # package build failures on 3.10
-  - pip
   # - numpy=1.26.4
   # - numpy-base=1.26.4
   - numpy
