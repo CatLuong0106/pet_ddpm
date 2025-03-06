@@ -2,7 +2,7 @@
 
 # Define variables
 OUTDIR=training-runs
-DATA_PATH=/home/luongcn/pet_ddpm/data/data.mat
+DATA_PATH=/home/luongcn/pet_ddpm/data/train_conditional/data.mat
 COND=0
 ARCH=ddpmpp
 BATCH=4
@@ -13,7 +13,7 @@ REAL_P=0.5
 PADDING=1
 TICK=2 
 SNAP=10
-PAD_WIDTH=64
+PAD_WIDTH=51
 IMSIZE=408
 
 # Run the training script with variables

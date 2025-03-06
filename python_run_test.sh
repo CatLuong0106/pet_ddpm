@@ -4,15 +4,15 @@
 NETWORK="training-runs/00013-aapm_3-uncond-ddpmpp-pedm-gpus1-batch4-fp32/network-snapshot-000400.pkl"
 OUTDIR="results"
 IMAGE_DIR="/home/luongcn/pet_ddpm/raw_data/HRRT_FDG_JB737"
-IMAGE_SIZE=512 # has to be 8 * psize
+IMAGE_SIZE=408 # has to be 8 * psize
 VIEWS=20
 NAME="denoise"
 STEPS=100
 SIGMA_MIN=0.003
 SIGMA_MAX=10
 ZETA=0.3
-PAD=64
-PSIZE=64
+PAD=51
+PSIZE=51
 # PSIZE=56
 
 # Run the Python script with specified arguments

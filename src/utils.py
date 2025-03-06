@@ -25,6 +25,23 @@ def check_hdr_image(hdr_path):
     obj = Sampling()
     obj.check_image(hdr_path)
 
+def get_pad_value(imsize, patch_size): 
+    """
+    Calculates the padding size needed to ensure that the entire image is covered by patches.
+
+    Args:
+        imsize (int): The size of the image.
+        patch_size (int): The size of each patch.
+
+    Returns:
+        int: The calculated padding value.
+    """
+
+    k = imsize // patch_size
+    pad = (k + 1)*patch_size - imsize
+    return pad
+
 if __name__ == "__main__":
-    check_mat_shape('/home/luongcn/pet_ddpm/data/data.mat')
+    check_mat_shape('/home/luongcn/pet_ddpm/data/train_conditional/data.mat')
+    print("Pad Size is: ", get_pad_value(408, 51))
     # check_hdr_image('/home/luongcn/pet_ddpm/raw_data/HRRT_NX_pair/HRRT_DH485/resliced_frame_000.hdr')
