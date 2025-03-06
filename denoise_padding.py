@@ -225,31 +225,14 @@ def denoisedFromPatches(net, x, t_hat, latents_pos, class_labels, indices, t_goa
     # print("All indices: ", indices)
     for i in range(patches):
         z = indices[i] #NOTE: Indices values of the patches
-        # if np.abs(z[2] - z[3]) != psize: 
-        #     z[2] -= (psize - np.abs(z[2] - z[3]))
-
-        #TODO: Hacking. Basically fix so that the indices of the patches won't exceed the range (0, 512)
-        if z[1] > 512: 
-            z[0] -= (z[1] - 512)
-            z[1] -= (z[1] - 512)
-
-        if z[3] > 512: 
-            z[2] -= (z[3] - 512)
-            z[3] -= (z[3] - 512)
-
         x_input[i,:,:,:] = torch.squeeze(x_hat[0,:,z[0]:z[1], z[2]:z[3]])
-        # if x_input[i,:,:,:].shape != x_hat[0,:,z[0]:z[1], z[2]:z[3]][:, :, :, 0].shape: #TODO: HACKING REMOVING THIS AFTER It's figured out
-        #     continue
-        # x_input[i,:,:,:] = x_hat[0,:,z[0]:z[1], z[2]:z[3]]
         pos_input[i,:,:,:] = torch.squeeze(latents_pos[:,:,z[0]:z[1], z[2]:z[3]])
     bigout = net(x_input, t_hat, pos_input, class_labels).to(torch.float64)
 
     for i in range(patches):
         z = indices[i]
         x_patch = x_hat[0,:,z[0]:z[1], z[2]:z[3]]
-        # if output[0,:,z[0]:z[1], z[2]:z[3]][:, :, :, 0].shape != bigout[i,:,:,:].shape: # TODO: Hacking removing this
-        #     continue
-        output[0,:,z[0]:z[1], z[2]:z[3]] += bigout[i,:,:,:] #TODO: Hacking removing this
+        output[0,:,z[0]:z[1], z[2]:z[3]] += bigout[i,:,:,:]
         output[0,:,z[0]:z[1], z[2]:z[3]] -= x_patch
     x_hat = x_hat + output
 

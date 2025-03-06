@@ -116,7 +116,7 @@ class Sampling:
         indices = np.where(condition)[0]
         return indices
 
-    def extract_slices(self, img, method="z-score", scale_max=0.25):
+    def extract_slices(self, img, method="z-score", scale_max=0.10):
         """
         Extract slices from a 3D image based on the specified method.
 
@@ -264,7 +264,7 @@ class Sampling:
         Checks the image at the given path by loading it and printing it out.
 
         Args:
-            img_path (str): The path to the image to be checked.
+            img_path (str): The .hdr path to the image to be checked. 
         """
         img = nib.load(img_path)
         print(img)
@@ -379,6 +379,7 @@ class Sampling:
             print("Final Data Shape: ", frames_data.shape)
             sio.savemat(Path("../data") / "data.mat", {"images": frames_data})
 
+
 class TestImages(Sampling): 
     def __init__(self, test_path, *args, **kwargs): 
         super().__init__(*args, **kwargs)
@@ -396,9 +397,73 @@ class TestImages(Sampling):
                 # Padding if the image is not squared
                 if H != W: core_data = self.pad_to_size(core_data)
                 output_path = Path(dest_path) / f"slice_{count}.png"
-                plt.imsave(output_path, core_data, cmap="gray", vmin=0, vmax=1e4)
+                plt.imsave(output_path, core_data, cmap="gray", vmin=0, vmax=5e4)
                 count += 1
+    
+
+class Conditional_Sampling(Sampling): 
+    def __init__(self, path_x, path_x_prior, output_path, *args, **kwargs): 
+        super().__init__(*args, **kwargs)
+        self.path_x = Path(path_x)
+        self.path_x_prior = Path(path_x_prior)
+        self.output_path = Path(output_path)
+    
+    def next_multiple_of_8(n):
+        return ((n // 8) + 1) * 8
+    
+    #TODO: Add code to generate dual-dataset (NX (original data) + HRRT (prior data))
+    def generate_conditional_dataset(self, option='npy'): 
+        x_files = [file_path for file_path in self.path_x.rglob("*.hdr")]
+        x_prior_files = [file_path for file_path in self.path_x_prior.rglob("*.hdr")]
+        x_frames_data = []  # Initialize an empty list to store core data arrays
+        x_prior_frames_data = []
+        for x_file, x_prior_file in zip(x_files, x_prior_files):
+            x_img_data = nib.load(x_file).get_fdata()
+            x_prior_img_data = nib.load(x_prior_file).get_fdata()
+            indices = self.extract_slices(x_img_data, method="scale_max")
             
+            #NOTE: Guarantee that the two images are of the same size
+            try:
+                if x_img_data.shape != x_prior_img_data.shape:
+                    raise ValueError(f"Shape mismatch: x_prior.shape = {x_prior_img_data.shape} != x.shape = {x_img_data.shape}")
+                else:
+                    print("Shapes match!")
+            except Exception as e:
+                print("Error during shape check:", e)
+
+            for idx in indices:
+                x_core_data = x_img_data[:, :, idx]
+                x_core_data = x_core_data / np.max(x_core_data)
+
+                x_prior_core_data = x_prior_img_data[:, :, idx]
+                x_prior_core_data = x_prior_core_data / np.max(x_prior_core_data)
+                
+                H, W = x_core_data.shape
+
+                # Padding if the image is not squared
+                #NOTE: Assume that the two images are of the same size
+                if H != W: 
+                    x_core_data = self.pad_to_size(x_core_data, size=self.next_multiple_of_8(H)) 
+                    x_prior_core_data = self.pad_to_size(x_prior_core_data, size=self.next_multiple_of_8(H))
+
+                print("Data Shape: ", x_core_data.shape)
+                x_frames_data.append(x_core_data)
+                x_prior_frames_data.append(x_prior_core_data)
+
+        x_frames_data = np.array(x_frames_data)
+        x_frames_data = x_frames_data.transpose(1, 2, 0)  # Reorder dimensions
+        x_prior_frames_data = np.array(x_prior_frames_data)
+        x_prior_frames_data = x_prior_frames_data.transpose(1, 2, 0)  # Reorder dimensions
+
+        print("Final X Data Shape: ", x_frames_data.shape)
+        print("Final X Prior Data Shape: ", x_prior_frames_data.shape)
+        if option == 'npy':
+            np.save(self.output_path / "data.npy", x_frames_data)
+            np.save(self.output_path / "data_prior.npy", x_prior_frames_data)
+        elif option == 'mat': 
+            sio.savemat(self.output_path / "data.mat", {"images": x_frames_data})
+            sio.savemat(self.output_path / "data_prior.mat", {"images": x_prior_frames_data})
+
 def main():
     parser = argparse.ArgumentParser(
         description="Extract slices from a 3D image based on different methods."
@@ -413,8 +478,6 @@ def main():
     # sampling.plot_distribution()
     sampling.generate_dataset(option='mat')
     sampling.generate_dataset(option='npy')
-
-
 
     # data = np.load(r"C:\Users\luongcn\pet_ddpm\data\data.npy")
     # sampling.display_montage(

@@ -3,7 +3,7 @@
 # Define variables
 NETWORK="training-runs/00013-aapm_3-uncond-ddpmpp-pedm-gpus1-batch4-fp32/network-snapshot-000400.pkl"
 OUTDIR="results"
-IMAGE_DIR="data/image_dir"
+IMAGE_DIR="/home/luongcn/pet_ddpm/raw_data/HRRT_FDG_JB737"
 IMAGE_SIZE=512 # has to be 8 * psize
 VIEWS=20
 NAME="denoise"

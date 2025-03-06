@@ -82,6 +82,8 @@ def parse_int_list(s):
 @click.option('--resume',        help='Resume from previous training state', metavar='PT',          type=str)
 @click.option('-n', '--dry-run', help='Print training options and exit',                            is_flag=True)
 
+@click.option('--imsize',        help='The image size for training',                                       type=int) #NOTE: Added option for the image size for training
+
 def main(**kwargs):
     """Train diffusion-based generative model using the techniques described in the
     paper "Elucidating the Design Space of Diffusion-Based Generative Models".
@@ -111,7 +113,7 @@ def main(**kwargs):
     c.four_channels = opts.four_channels
     c.hash_channels = opts.hash_channels
     c.pad_width = opts.pad_width
-
+    c.imsize = opts.imsize
     # Validate dataset options.
     # try:
     #     dataset_obj = dnnlib.util.construct_class_by_name(**c.dataset_kwargs)

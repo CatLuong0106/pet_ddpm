@@ -334,7 +334,7 @@ class SongUNet(torch.nn.Module): #TODO: Modify the number of in_channels here on
                 self.dec[f'{res}x{res}_aux_norm'] = GroupNorm(num_channels=cout, eps=1e-6)
                 self.dec[f'{res}x{res}_aux_conv'] = Conv2d(in_channels=cout, out_channels=out_channels, kernel=3, **init_zero)
 
-    def forward(self, x, noise_labels, class_labels, augment_labels=None):
+    def forward(self, x, noise_labels, class_labels, augment_labels=None): # Modify this to pass in x_prior and concatenate them along the channel dimension
         # Mapping.
         emb = self.map_noise(noise_labels)
         emb = emb.reshape(emb.shape[0], 2, -1).flip(1).reshape(*emb.shape) # swap sin/cos
@@ -694,7 +694,7 @@ class EDMPrecond(torch.nn.Module):
 class Patch_EDMPrecond(torch.nn.Module):
     def __init__(self,
         img_resolution,                     # Image resolution.
-        img_channels,                       # Number of color channels. #TODO: Remove 4 for non-conditional training
+        img_channels,                       # Number of color channels. #TODO: Remove 4 for non-conditional training, use 4 for conditional training
         out_channels    = None,
         label_dim       = 0,                # Number of class labels, 0 = unconditional.
         use_fp16        = False,            # Execute the underlying model at FP16 precision?
