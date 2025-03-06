@@ -80,13 +80,17 @@ def training_loop(
     dist.print0('Loading dataset...')
     #dataset_obj = dnnlib.util.construct_class_by_name(**dataset_kwargs) # subclass of training.dataset.Dataset
     # mypath = '/n/badwater/z/jashu/aapm_small/ct_3img/ct_3img.mat'
-    mypath = '/home/luongcn/pet_ddpm/data/data.mat'
-
+    
+    mypath = '/home/luongcn/pet_ddpm/data/train_conditional/data.mat'
+    mypath_prior = '/home/luongcn/pet_ddpm/data/train_conditional/data_prior.mat'
+    
     #this should contain a mat file with a variable called 'images' of size 256x256xH where H is the number of training images
     # imsize = 256
 
     imsize = imsize # TODO: Change it to whatever image size we have
     dataset_obj = ImageFolderDataset3(mypath, imsize + 2*pad_width, pad=pad_width, bigdata=False, channels=1, zlast=True)
+    dataset_obj_prior = ImageFolderDataset3(mypath_prior, imsize + 2*pad_width, pad=pad_width, bigdata=False, channels=1, zlast=True)
+    
     #TODO: Create another dataset object (to load in the priors)
     #dataset_obj = ImageFolderDataset5(mypath, 256 + 2*pad_width, pad=pad_width, channels=1, cache=False)
 

@@ -11,10 +11,10 @@ DROPOUT=0.05
 AUGMENT=0
 REAL_P=0.5
 PADDING=1
-TICK=2
+TICK=2 
 SNAP=10
 PAD_WIDTH=64
-IMSIZE=484
+IMSIZE=408
 
 # Run the training script with variables
 python train.py \

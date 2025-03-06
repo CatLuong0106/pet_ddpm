@@ -6,8 +6,7 @@ import argparse
 import logging
 import scipy.io as sio
 from pathlib import Path
-
-
+from tqdm import tqdm
 class Sampling:
     def __init__(self, data_path="HRRT_NX", *kwargs):
         self.data_path = data_path
@@ -408,7 +407,7 @@ class Conditional_Sampling(Sampling):
         self.path_x_prior = Path(path_x_prior)
         self.output_path = Path(output_path)
     
-    def next_multiple_of_8(n):
+    def next_multiple_of_8(self, n):
         return ((n // 8) + 1) * 8
     
     #TODO: Add code to generate dual-dataset (NX (original data) + HRRT (prior data))
@@ -417,7 +416,7 @@ class Conditional_Sampling(Sampling):
         x_prior_files = [file_path for file_path in self.path_x_prior.rglob("*.hdr")]
         x_frames_data = []  # Initialize an empty list to store core data arrays
         x_prior_frames_data = []
-        for x_file, x_prior_file in zip(x_files, x_prior_files):
+        for x_file, x_prior_file in tqdm(zip(x_files, x_prior_files), total=len(x_files), desc="Processing files"):
             x_img_data = nib.load(x_file).get_fdata()
             x_prior_img_data = nib.load(x_prior_file).get_fdata()
             indices = self.extract_slices(x_img_data, method="scale_max")
@@ -442,11 +441,10 @@ class Conditional_Sampling(Sampling):
 
                 # Padding if the image is not squared
                 #NOTE: Assume that the two images are of the same size
-                if H != W: 
-                    x_core_data = self.pad_to_size(x_core_data, size=self.next_multiple_of_8(H)) 
-                    x_prior_core_data = self.pad_to_size(x_prior_core_data, size=self.next_multiple_of_8(H))
+                x_core_data = self.pad_to_size(x_core_data, size=self.next_multiple_of_8(H)) 
+                x_prior_core_data = self.pad_to_size(x_prior_core_data, size=self.next_multiple_of_8(H))
 
-                print("Data Shape: ", x_core_data.shape)
+                # print("Data Shape: ", x_core_data.shape)
                 x_frames_data.append(x_core_data)
                 x_prior_frames_data.append(x_prior_core_data)
 
