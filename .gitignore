@@ -5,3 +5,4 @@
 /data
 /training-runs
 __pycache__/
+training/__pycache__/
